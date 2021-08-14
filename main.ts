@@ -69,7 +69,7 @@ export default class MyPlugin extends Plugin {
             .setTitle(
               isHeading
                 ? "Copy heading embed"
-                : "Copy link embed"
+                : "Copy block embed"
             )
             .setIcon("links-coming-in")
             .onClick(() => onClick(true));
