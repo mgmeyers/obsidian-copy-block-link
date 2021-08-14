@@ -1,112 +1,56 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { EditorPosition, Plugin } from "obsidian";
 
-interface MyPluginSettings {
-	mySetting: string;
+function generateId(): string {
+  return Math.random().toString(36).substr(2, 6);
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+const isHeadingRegEx = /^#{1,6}\s+[^\s]/;
+const blockIdRegEx = /\s\^([^\s])$/;
 
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+  async onload() {
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor, view) => {
+        const cursor = editor.getCursor("to");
+        const line = editor.getLine(cursor.line);
+        const basename = view.file.basename;
 
-	async onload() {
-		console.log('loading plugin');
+        const isHeading = isHeadingRegEx.test(line);
 
-		await this.loadSettings();
+        menu.addItem((item) => {
+          item
+            .setTitle(isHeading ? "Copy link to heading" : "Copy link to block")
+            .setIcon("links-coming-in")
+            .onClick(() => {
+              // Copy heading
+              if (isHeading) {
+                return navigator.clipboard.writeText(
+                  `![[${basename}#${line.replace(/^#+\s/, "")}]]`
+                );
+              }
 
-		this.addRibbonIcon('dice', 'Sample Plugin', () => {
-			new Notice('This is a notice!');
-		});
+              const match = line.match(blockIdRegEx);
 
-		this.addStatusBarItem().setText('Status Bar Text');
+              // Copy existing block id
+              if (match) {
+                return navigator.clipboard.writeText(
+                  `![[${basename}#^${match[1]}]]`
+                );
+              }
 
-		this.addCommand({
-			id: 'open-sample-modal',
-			name: 'Open Sample Modal',
-			// callback: () => {
-			// 	console.log('Simple Callback');
-			// },
-			checkCallback: (checking: boolean) => {
-				let leaf = this.app.workspace.activeLeaf;
-				if (leaf) {
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-					return true;
-				}
-				return false;
-			}
-		});
+              // Add a block id
+              const end: EditorPosition = {
+                line: cursor.line,
+                ch: line.length,
+              };
 
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+              const id = generateId();
 
-		this.registerCodeMirror((cm: CodeMirror.Editor) => {
-			console.log('codemirror', cm);
-		});
-
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
-
-	onunload() {
-		console.log('unloading plugin');
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		let {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		let {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue('')
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+              editor.replaceRange(` ^${id}`, end);
+              navigator.clipboard.writeText(`![[${basename}#^${id}]]`);
+            });
+        });
+      })
+    );
+  }
 }
