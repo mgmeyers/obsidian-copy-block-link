@@ -5,7 +5,7 @@ function generateId(): string {
 }
 
 const isHeadingRegEx = /^#{1,6}\s+[^\s]/;
-const blockIdRegEx = /\s\^([^\s])$/;
+const blockIdRegEx = /\s\^([^\s]+)$/;
 
 export default class MyPlugin extends Plugin {
   async onload() {
