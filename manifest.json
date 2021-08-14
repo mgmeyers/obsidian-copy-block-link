@@ -1,9 +1,9 @@
 {
 	"id": "obsidian-copy-block-link",
 	"name": "Copy Block Link",
-	"version": "1.0.1",
+	"version": "1.0.0",
 	"minAppVersion": "0.12.12",
-	"description": "Adds an option to the editor context menu to copy a link to a block or heading.",
+	"description": "Get links to blocks and headings from Obsidian's right click menu",
 	"author": "mgmeyers",
 	"authorUrl": "https://github.com/mgmeyers/obsidian-copy-block-link",
 	"isDesktopOnly": true
