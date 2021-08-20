@@ -7,6 +7,8 @@ function generateId(): string {
 const isHeadingRegEx = /^#{1,6}\s+[^\s]/;
 const blockIdRegEx = /\s\^([^\s]+)$/;
 
+// https://help.obsidian.md/How+to/Link+to+blocks
+
 export default class MyPlugin extends Plugin {
   async onload() {
     this.registerEvent(
