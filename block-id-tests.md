@@ -22,6 +22,8 @@ the id for the block goes here → ^9a5cbc
 	1. intented list items get a blockid
 2. list2
 3. only this item ^3e2e13
+4. what about some weird thing like this
+hi, I’m not a list item. But it looks like I’m considered part of the block defined by list item 4 ^b3584b
 
 ---
 
