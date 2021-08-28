@@ -1,61 +1,103 @@
-import { EditorPosition, Plugin } from "obsidian";
+import { EditorPosition, ListItemCache, Plugin, SectionCache } from "obsidian";
 
 function generateId(): string {
   return Math.random().toString(36).substr(2, 6);
 }
 
-const isHeadingRegEx = /^#{1,6}\s+[^\s]/;
-const blockIdRegEx = /\s\^([^\s]+)$/;
-
-// https://help.obsidian.md/How+to/Link+to+blocks
+function shouldInsertAfter(block: ListItemCache | SectionCache) {
+  if ((block as any).type) {
+    return [
+      "blockquote",
+      "code",
+      "table",
+      "comment",
+      "footnoteDefinition",
+    ].includes((block as SectionCache).type);
+  }
+}
 
 export default class MyPlugin extends Plugin {
   async onload() {
     this.registerEvent(
       this.app.workspace.on("editor-menu", (menu, editor, view) => {
         const cursor = editor.getCursor("to");
-        const line = editor.getLine(cursor.line);
-        const basename = view.file.basename;
+        const fileCache = this.app.metadataCache.getFileCache(view.file);
 
-        const isHeading = isHeadingRegEx.test(line);
+        let blockCache: ListItemCache | SectionCache = (
+          fileCache?.sections || []
+        ).find((section) => {
+          return (
+            section.position.start.line <= cursor.line &&
+            section.position.end.line >= cursor.line
+          );
+        });
+
+        if (!blockCache) return;
+
+        if (blockCache.type === "list") {
+          blockCache = (fileCache?.listItems || []).find((item) => {
+            return (
+              item.position.start.line <= cursor.line &&
+              item.position.end.line >= cursor.line
+            );
+          });
+        }
+
+        const isHeading = (blockCache as any).type === "heading";
 
         const onClick = (isEmbed: boolean) => {
           // Copy heading
           if (isHeading) {
-            return navigator.clipboard.writeText(
-              `${isEmbed ? "!" : ""}[[${basename}#${line.replace(
-                /^#+\s/,
-                ""
-              )}]]`
+            const heading = fileCache.headings.find((heading) => {
+              return (
+                heading.position.start.line === blockCache.position.start.line
+              );
+            });
+
+            return (
+              heading &&
+              navigator.clipboard.writeText(
+                `${
+                  isEmbed ? "!" : ""
+                }${this.app.fileManager.generateMarkdownLink(
+                  view.file,
+                  "",
+                  "#" + heading.heading
+                )}`
+              )
             );
           }
 
-          const match = line.match(blockIdRegEx);
+          const blockId = blockCache.id;
 
           // Copy existing block id
-          if (match) {
+          if (blockId) {
             return navigator.clipboard.writeText(
-              `${isEmbed ? "!" : ""}[[${basename}#^${match[1]}]]`
+              `${isEmbed ? "!" : ""}${this.app.fileManager.generateMarkdownLink(
+                view.file,
+                "",
+                "#^" + blockId
+              )}`
             );
           }
 
           // Add a block id
+          const sectionEnd = blockCache.position.end;
           const end: EditorPosition = {
-            line: cursor.line,
-            ch: line.length,
+            ch: sectionEnd.col,
+            line: sectionEnd.line,
           };
 
           const id = generateId();
-          const isBlockquote = /^\s*>+./.test(line);
+          const spacer = shouldInsertAfter(blockCache) ? "\n\n" : " ";
 
-          // TODO: better handle blockquotes and codeblocks
-
-          editor.replaceRange(
-            `${isBlockquote ? "\n\n" : " "}^${id}${isBlockquote ? "\n" : ""}`,
-            end
-          );
+          editor.replaceRange(`${spacer}^${id}`, end);
           navigator.clipboard.writeText(
-            `${isEmbed ? "!" : ""}[[${basename}#^${id}]]`
+            `${isEmbed ? "!" : ""}${this.app.fileManager.generateMarkdownLink(
+              view.file,
+              "",
+              "#^" + id
+            )}`
           );
         };
 
@@ -68,11 +110,7 @@ export default class MyPlugin extends Plugin {
 
         menu.addItem((item) => {
           item
-            .setTitle(
-              isHeading
-                ? "Copy heading embed"
-                : "Copy block embed"
-            )
+            .setTitle(isHeading ? "Copy heading embed" : "Copy block embed")
             .setIcon("links-coming-in")
             .onClick(() => onClick(true));
         });
