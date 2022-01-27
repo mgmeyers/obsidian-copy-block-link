@@ -138,7 +138,7 @@ export default class MyPlugin extends Plugin {
       `${isEmbed ? "!" : ""}${this.app.fileManager.generateMarkdownLink(
         file,
         "",
-        "#" + block.heading
+        "#" + block.heading.match(/\w|\s/g).join("")
       )}`
     );
   }
