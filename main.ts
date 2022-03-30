@@ -13,6 +13,14 @@ function generateId(): string {
   return Math.random().toString(36).substr(2, 6);
 }
 
+const illegalHeadingCharsRegex = /[!"#$%&()*+,.:;<=>?@^`{|}~\/\[\]\\]/g;
+function sanitizeHeading(heading: string) {
+  return heading
+    .replace(illegalHeadingCharsRegex, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function shouldInsertAfter(block: ListItemCache | SectionCache) {
   if ((block as any).type) {
     return [
@@ -65,44 +73,49 @@ export default class MyPlugin extends Plugin {
     );
 
     this.addCommand({
-      id: 'copy-link-to-block',
+      id: "copy-link-to-block",
       name: "Copy link to current block or heading",
       editorCheckCallback: (isChecking, editor, view) => {
-        return this.handleCommand(isChecking, editor, view, false)
+        return this.handleCommand(isChecking, editor, view, false);
       },
-    })
+    });
 
     this.addCommand({
-      id: 'copy-embed-to-block',
+      id: "copy-embed-to-block",
       name: "Copy embed to current block or heading",
       editorCheckCallback: (isChecking, editor, view) => {
-        return this.handleCommand(isChecking, editor, view, true)
+        return this.handleCommand(isChecking, editor, view, true);
       },
-    })
+    });
   }
 
-  handleCommand(isChecking: boolean, editor: Editor, view: MarkdownView, isEmbed: boolean) {
-      if (isChecking) {
-        return !!this.getBlock(editor, view.file);
-      }
-      
-      const block = this.getBlock(editor, view.file);
-
-      if (!block) return;
-
-      const isHeading = !!(block as any).heading;
-
-      if (isHeading) {
-        this.handleHeading(view.file, block as HeadingCache, isEmbed);
-      } else {
-        this.handleBlock(
-          view.file,
-          editor,
-          block as SectionCache | ListItemCache,
-          isEmbed
-        );
-      }
+  handleCommand(
+    isChecking: boolean,
+    editor: Editor,
+    view: MarkdownView,
+    isEmbed: boolean
+  ) {
+    if (isChecking) {
+      return !!this.getBlock(editor, view.file);
     }
+
+    const block = this.getBlock(editor, view.file);
+
+    if (!block) return;
+
+    const isHeading = !!(block as any).heading;
+
+    if (isHeading) {
+      this.handleHeading(view.file, block as HeadingCache, isEmbed);
+    } else {
+      this.handleBlock(
+        view.file,
+        editor,
+        block as SectionCache | ListItemCache,
+        isEmbed
+      );
+    }
+  }
 
   getBlock(editor: Editor, file: TFile) {
     const cursor = editor.getCursor("to");
@@ -130,7 +143,7 @@ export default class MyPlugin extends Plugin {
       });
     }
 
-    return block
+    return block;
   }
 
   handleHeading(file: TFile, block: HeadingCache, isEmbed: boolean) {
@@ -138,7 +151,7 @@ export default class MyPlugin extends Plugin {
       `${isEmbed ? "!" : ""}${this.app.fileManager.generateMarkdownLink(
         file,
         "",
-        "#" + block.heading
+        "#" + sanitizeHeading(block.heading)
       )}`
     );
   }
